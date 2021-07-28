@@ -4,8 +4,8 @@ import mod.omoflop.betterbundles.api.BetterBundle;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.BowItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.RangedWeaponItem;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Mixin(PlayerEntity.class)
 public abstract class PlayerEntityMixin {
@@ -21,16 +22,13 @@ public abstract class PlayerEntityMixin {
 
     @Shadow @Final private PlayerInventory inventory;
 
-    @Shadow public abstract PlayerAbilities getAbilities();
-
     @Inject(method = "getArrowType", at = @At("HEAD"), cancellable = true)
     public void getArrowType(ItemStack stack, CallbackInfoReturnable<ItemStack> cir) {
-        Optional<BetterBundle> ammoBundle = BetterBundle.fetchFromInventory(inventory, BowItem.BOW_PROJECTILES);
+        Predicate<ItemStack> projectiles = ((RangedWeaponItem)stack.getItem()).getHeldProjectiles();
+        Optional<BetterBundle> ammoBundle = BetterBundle.fetchFromInventory(inventory, projectiles);
         if (ammoBundle.isPresent()) {
-            Optional<ItemStack> ammoItemStack = ammoBundle.get().getItem(BowItem.BOW_PROJECTILES);
-            if (ammoItemStack.isPresent()) {
-                cir.setReturnValue(ammoItemStack.get());
-            }
+            Optional<ItemStack> ammoItemStack = ammoBundle.get().getItem(projectiles);
+            ammoItemStack.ifPresent(cir::setReturnValue);
         }
     }
 }
